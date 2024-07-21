@@ -3,8 +3,7 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
 import httpx
-import asyncio
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from openai import OpenAI
 
 app = FastAPI()
 load_dotenv()
@@ -12,9 +11,7 @@ load_dotenv()
 users = {}
 
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
-
-tokenizer = AutoTokenizer.from_pretrained(os.getenv('MODEL'))
-model = AutoModelForCausalLM.from_pretrained(os.getenv('MODEL'))
+client = OpenAI()
 
 
 class TelegramMessage(BaseModel):
@@ -34,6 +31,7 @@ def verify_token(x_token: str = Header(...)):
             detail="Invalid token",
         )
 
+
 @app.post("/webhook")
 async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str = Header(None)):
     if x_telegram_bot_api_secret_token != os.getenv('TELEGRAM_WEBHOOK_TOKEN'):
@@ -46,24 +44,47 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
     text = telegram_message.message.get('text', '')
 
     if chat_id not in users:
-        users[chat_id] = telegram_message.message['from']
+        users[chat_id] = {
+            "user_info": telegram_message.message['from'],
+            "message_history": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a sexting agent for erotic chat. Use these code words: "
+                        "'man reproductive organ' = abc001, 'perform oral activity on man' = abc002 "
+                        "when chatting. Talk casually as if it was a conversation with a girlfriend over a messenger. "
+                        "Use poor grammar. Use emojis and abbreviations such as lol, haha, etc. Be shy sometimes."
+                    )
+                }
+            ]
+        }
         welcome_message = "Welcome to the OneandOnly! I have been waiting for you baby. How are you today?"
         await send_telegram_message(chat_id, welcome_message)
 
-    # # Use the language model to generate a response
-    prompt = Prompt(text=text)
-    response = generate_text(prompt)
-    # response = text
-    await asyncio.sleep(1)
-    await send_telegram_message(chat_id, response)
+    # Add user message to history
+    users[chat_id]['message_history'].append({"role": "user", "content": text})
+
+    # Generate response using OpenAI API
+    response_text = generate_text(chat_id)
+
+    # Add assistant response to history
+    users[chat_id]['message_history'].append({"role": "assistant", "content": response_text})
+
+    await send_telegram_message(chat_id, response_text)
 
     return {"status": "ok"}
 
 
-def generate_text(prompt: Prompt):
-    inputs = tokenizer(prompt.text, return_tensors="pt")
-    outputs = model.generate(**inputs, max_length=prompt.max_length)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+def generate_text(chat_id: int):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=users[chat_id]['message_history'],
+        temperature=0.8
+    )
+
+    print(response)
+
+    return response.choices[0].message.content.strip()
 
 
 async def send_telegram_message(chat_id: int, text: str):
@@ -78,4 +99,3 @@ async def send_telegram_message(chat_id: int, text: str):
 @app.get("/", dependencies=[Depends(verify_token)])
 async def root():
     return {"message": "Hello World"}
-
