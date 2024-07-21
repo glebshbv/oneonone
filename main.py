@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 import httpx
 import asyncio
-# from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 app = FastAPI()
 load_dotenv()
@@ -13,8 +13,8 @@ users = {}
 
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
 
-# tokenizer = AutoTokenizer.from_pretrained(os.getenv('MODEL'))
-# model = AutoModelForCausalLM.from_pretrained(os.getenv('MODEL'))
+tokenizer = AutoTokenizer.from_pretrained(os.getenv('MODEL'))
+model = AutoModelForCausalLM.from_pretrained(os.getenv('MODEL'))
 
 
 class TelegramMessage(BaseModel):
@@ -52,18 +52,18 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
 
     # # Use the language model to generate a response
     prompt = Prompt(text=text)
-    # response = generate_text(prompt)
-    response = text
+    response = generate_text(prompt)
+    # response = text
     await asyncio.sleep(1)
     await send_telegram_message(chat_id, response)
 
     return {"status": "ok"}
 
 
-# def generate_text(prompt: Prompt):
-#     inputs = tokenizer(prompt.text, return_tensors="pt")
-#     outputs = model.generate(**inputs, max_length=prompt.max_length)
-#     return tokenizer.decode(outputs[0], skip_special_tokens=True)
+def generate_text(prompt: Prompt):
+    inputs = tokenizer(prompt.text, return_tensors="pt")
+    outputs = model.generate(**inputs, max_length=prompt.max_length)
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 
 async def send_telegram_message(chat_id: int, text: str):
