@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      MODEL: ${MODEL}

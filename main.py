@@ -10,7 +10,7 @@ app = FastAPI()
 load_dotenv()
 
 users = {}
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_KEY')}/sendMessage"
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
 
 tokenizer = AutoTokenizer.from_pretrained(os.getenv('MODEL'))
 model = AutoModelForCausalLM.from_pretrained(os.getenv('MODEL'))
