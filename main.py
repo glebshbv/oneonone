@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 import httpx
 from openai import OpenAI
+from elevenlabs.client import ElevenLabs
+from elevenlabs import Voice, VoiceSettings, save
+import uuid
+from messenger import Messenger
 
 app = FastAPI()
 load_dotenv()
@@ -11,7 +15,9 @@ load_dotenv()
 users = {}
 
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
+TELEGRAM_VOICE_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendVoice"
 client = OpenAI()
+eclient = ElevenLabs()
 
 
 class TelegramMessage(BaseModel):
@@ -40,8 +46,7 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
     data = await request.json()
     telegram_message = TelegramMessage(**data)
 
-    chat_id = telegram_message.message['chat']['id']
-    text = telegram_message.message.get('text', '')
+    chat_id, text = telegram_message.message['chat']['id'], telegram_message.message.get('text', '')
 
     if chat_id not in users:
         users[chat_id] = {
@@ -52,27 +57,54 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
                     "content": (
                         "You are a sexting agent for erotic chat. Use these code words: "
                         "'man reproductive organ' = abc001, 'perform oral activity on man' = abc002 "
-                        "when chatting. Talk casually as if it was a conversation with a girlfriend over a messenger. "
-                        "Use poor grammar. Use emojis and abbreviations such as lol, haha, etc. Be shy sometimes."
+                        "when chatting. Never use emoji! Talk casually as if it was a conversation with a girlfriend over a messenger. Your reply should be maximum one sentence"
                     )
                 }
             ]
         }
-        welcome_message = "Welcome to the OneandOnly! I have been waiting for you baby. How are you today?"
+        welcome_message = "Welcome!"
+        default_voice_note_path = "./tmp/default.mp3"
         await send_telegram_message(chat_id, welcome_message)
+        await send_telegram_voice_message(chat_id, default_voice_note_path)
 
     # Add user message to history
     users[chat_id]['message_history'].append({"role": "user", "content": text})
 
     # Generate response using OpenAI API
     response_text = generate_text(chat_id)
-
-    # Add assistant response to history
     users[chat_id]['message_history'].append({"role": "assistant", "content": response_text})
 
-    await send_telegram_message(chat_id, response_text)
+    voice_note_path = convert_text_to_speech(response_text)
+
+    try:
+        await send_telegram_voice_message(chat_id, voice_note_path)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send default voice message: {str(e)}")
 
     return {"status": "ok"}
+
+
+async def convert_text_to_speech(text: str) -> str:
+    print(text)
+    try:
+        audio = eclient.text_to_speech.convert(
+            voice_id="jiu4Wfaap7lPa79o7TSV",
+            text=str(text),
+            voice_settings=VoiceSettings(
+                stability=0.9,
+                similarity_boost=0.55,
+                style=0.2,
+                use_speaker_boost=True,
+            ),
+        )
+        voice_file_path = f"./tmp/{uuid.uuid4()}.mp3"
+        save(audio, voice_file_path)
+        return voice_file_path
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return "./tmp/default.mp3"
 
 
 def generate_text(chat_id: int):
@@ -81,9 +113,6 @@ def generate_text(chat_id: int):
         messages=users[chat_id]['message_history'],
         temperature=0.8
     )
-
-    print(response)
-
     return response.choices[0].message.content.strip()
 
 
@@ -93,6 +122,21 @@ async def send_telegram_message(chat_id: int, text: str):
             TELEGRAM_API_URL,
             json={"chat_id": chat_id, "text": text}
         )
+    return response.json()
+
+
+async def send_telegram_voice_message(chat_id: int, voice_file_path: str):
+    async with httpx.AsyncClient() as asyncclient:
+        with open(voice_file_path, 'rb') as voice_file:
+            files = {
+                'voice': ('voice.mp3', voice_file, 'audio/mp3')
+            }
+            data = {
+                'chat_id': chat_id
+            }
+            response = await asyncclient.post(TELEGRAM_VOICE_API_URL, data=data, files=files)
+    if response.status_code != 200:
+        raise HTTPException(status_code=500, detail="Failed to send voice message")
     return response.json()
 
 

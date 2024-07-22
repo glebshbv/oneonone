@@ -12,6 +12,7 @@ services:
       MODEL: ${MODEL}
       API_TOKEN: ${API_TOKEN}
       TELEGRAM_WEBHOOK_TOKEN: ${TELEGRAM_WEBHOOK_TOKEN}
+      ELEVEN_API_KEY: ${ELEVEN_API_KEY}
 
   nginx:
     image: nginx:latest
