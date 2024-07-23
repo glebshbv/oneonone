@@ -13,6 +13,7 @@ services:
       API_TOKEN: ${API_TOKEN}
       TELEGRAM_WEBHOOK_TOKEN: ${TELEGRAM_WEBHOOK_TOKEN}
       ELEVEN_API_KEY: ${ELEVEN_API_KEY}
+      ELEVEN_VOICE_ID: ${ELEVEN_VOICE_ID}
 
   nginx:
     image: nginx:latest
