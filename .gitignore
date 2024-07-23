@@ -28,5 +28,6 @@ archive.zip
 
 # macOS
 .DS_Store
-/tmp/*
+# Ignore the /tmp/default directory
+tmp
 test.ipynb

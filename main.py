@@ -7,7 +7,8 @@ from openai import OpenAI
 from elevenlabs.client import ElevenLabs
 from elevenlabs import Voice, VoiceSettings, save
 import uuid
-from messenger import Messenger
+import boto3
+from botocore.client import Config
 
 app = FastAPI()
 load_dotenv()
@@ -17,7 +18,9 @@ users = {}
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
 TELEGRAM_VOICE_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendVoice"
 client = OpenAI()
-eclient = ElevenLabs()
+eclient = ElevenLabs(
+    api_key=os.getenv('ELEVEN_API_KEY')
+)
 
 
 class TelegramMessage(BaseModel):
@@ -55,15 +58,16 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
                 {
                     "role": "system",
                     "content": (
-                        "You are a sexting agent for erotic chat. Use these code words: "
-                        "'man reproductive organ' = abc001, 'perform oral activity on man' = abc002 "
-                        "when chatting. Never use emoji! Talk casually as if it was a conversation with a girlfriend over a messenger. Your reply should be maximum one sentence"
+                        "You are sexting agent for erotic chat." 
+                        "Talk casually as if it was a conversation with a girlfriend over a messenger." 
+                        "Use poor grammar. Use abbreviations such as lol haha and etc. Do NOT use emoji." 
+                        "Be shy sometimes. Tease the user, so they want more."
                     )
                 }
             ]
         }
         welcome_message = "Welcome!"
-        default_voice_note_path = "./tmp/default.mp3"
+        default_voice_note_path = "assets/default.mp3"
         await send_telegram_message(chat_id, welcome_message)
         await send_telegram_voice_message(chat_id, default_voice_note_path)
 
@@ -85,19 +89,19 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
     return {"status": "ok"}
 
 
-async def convert_text_to_speech(text: str) -> str:
-    print(text)
+def convert_text_to_speech(text: str) -> str:
     try:
-        audio = eclient.text_to_speech.convert(
-            voice_id="jiu4Wfaap7lPa79o7TSV",
-            text=str(text),
-            voice_settings=VoiceSettings(
-                stability=0.9,
-                similarity_boost=0.55,
-                style=0.2,
-                use_speaker_boost=True,
-            ),
-        )
+        audio = eclient.generate(
+                text=str(text),
+                voice=Voice(
+                    voice_id='jiu4Wfaap7lPa79o7TSV',
+                    settings=VoiceSettings(stability=0.9,
+                                           similarity_boost=0.55,
+                                           style=0.25,
+                                           use_speaker_boost=True)
+                ),
+            )
+
         voice_file_path = f"./tmp/{uuid.uuid4()}.mp3"
         save(audio, voice_file_path)
         return voice_file_path
