@@ -43,8 +43,6 @@ class Prompt(BaseModel):
     max_length: int = 100
 
 
-
-
 @app.post("/webhook")
 async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str = Header(None)):
     if x_telegram_bot_api_secret_token != os.getenv('TELEGRAM_WEBHOOK_TOKEN'):
@@ -52,7 +50,7 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
 
     data = await request.json()
     telegram_message = TelegramMessage(**data)
-
+    print(telegram_message)
     chat_id, text = telegram_message.message['chat']['id'], telegram_message.message.get('text', '')
 
     if chat_id not in users:
@@ -91,6 +89,8 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send default voice message: {str(e)}")
+
+    print(users)
 
     return {"status": "ok"}
 
