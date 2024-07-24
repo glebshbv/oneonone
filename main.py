@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, Depends, status, Header
+from fastapi import FastAPI, Request, HTTPException, Header
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -7,11 +7,21 @@ from openai import OpenAI
 from elevenlabs.client import ElevenLabs
 from elevenlabs import Voice, VoiceSettings, save
 import uuid
-import boto3
-from botocore.client import Config
+from db.database import engine
+from db.models import user
+from db.models import message_history
+
+from api import client, admin
+
+user.Base.metadata.create_all(bind=engine)
+message_history.Base.metadata.create_all(bind=engine)
+
 
 app = FastAPI()
 load_dotenv()
+
+app.include_router(client.router, prefix="")
+app.include_router(admin.router, prefix="/admin")
 
 users = {}
 
@@ -33,12 +43,6 @@ class Prompt(BaseModel):
     max_length: int = 100
 
 
-def verify_token(x_token: str = Header(...)):
-    if x_token != os.getenv('API_TOKEN'):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
 
 
 @app.post("/webhook")
@@ -67,21 +71,23 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
             ]
         }
         welcome_message = "Welcome!"
-        default_voice_note_path = "assets/default.mp3"
+        # default_voice_note_path = "assets/default.mp3"
         await send_telegram_message(chat_id, welcome_message)
-        await send_telegram_voice_message(chat_id, default_voice_note_path)
+        # await send_telegram_voice_message(chat_id, default_voice_note_path)
 
     # Add user message to history
     users[chat_id]['message_history'].append({"role": "user", "content": text})
 
     # Generate response using OpenAI API
-    response_text = generate_text(chat_id)
+    # response_text = generate_text(chat_id)
+    response_text = "working on it"
     users[chat_id]['message_history'].append({"role": "assistant", "content": response_text})
 
-    voice_note_path = convert_text_to_speech(response_text)
+    # voice_note_path = convert_text_to_speech(response_text)
 
     try:
-        await send_telegram_voice_message(chat_id, voice_note_path)
+        await send_telegram_message(chat_id, response_text)
+        # await send_telegram_voice_message(chat_id, voice_note_path)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send default voice message: {str(e)}")
@@ -143,7 +149,3 @@ async def send_telegram_voice_message(chat_id: int, voice_file_path: str):
         raise HTTPException(status_code=500, detail="Failed to send voice message")
     return response.json()
 
-
-@app.get("/", dependencies=[Depends(verify_token)])
-async def root():
-    return {"message": "Hello World"}
