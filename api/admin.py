@@ -30,4 +30,9 @@ async def read_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 
 
 @router.post("/users", dependencies=[Depends(verify_token)])
 async def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
-    return create_user(db=db, user=user)
+    if get_user_by_chat_id(db=db, chat_id=user.chat_id):
+        raise HTTPException(status_code=400, detail="User is already registered")
+    user = create_user(db=db, user=user)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Failed to create user")
+    return user
