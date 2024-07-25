@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from api import client, admin
 
 from schemas.telegram_message import TelegramMessage
+from services.eleven_labs_handler import ElevenLabsHandler
 
 from services.message_handler import MessageHandler
 from services.openai_handler import OpenAIHandler
@@ -41,15 +42,18 @@ eclient = ElevenLabs(
 
 
 @app.post("/webhook")
-async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str = Header(None), db: Session = Depends(get_db)):
+async def handle_webhook(request: Request,
+                         x_telegram_bot_api_secret_token: str = Header(None),
+                         db: Session = Depends(get_db)
+                         ):
     # if x_telegram_bot_api_secret_token != os.getenv('TELEGRAM_WEBHOOK_TOKEN'):
     #     raise HTTPException(status_code=403, detail="Unauthorized")
-    data = await request.json()
+    # data = await request.json()
+    # user_id = await MessageHandler(telegram_message=data, db=db).receive_message()
+    # oai_handler = OpenAIHandler(user_id=user_id, db=db).messages()
+    buckets = ElevenLabsHandler().default_audio_downloader()
+    print(buckets)
 
-    user_id = await MessageHandler(telegram_message=data, db=db).receive_message()
-
-    oai_handler = OpenAIHandler(user_id=user_id, db=db).messages()
-    print("This is my answer:", oai_handler)
     #
     #
     #
@@ -93,7 +97,6 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
     #
     # except Exception as e:
     #     raise HTTPException(status_code=500, detail=f"Failed to send default voice message: {str(e)}")
-
 
     return {"status": "ok"}
 
