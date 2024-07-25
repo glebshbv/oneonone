@@ -69,23 +69,23 @@ async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str 
             ]
         }
         welcome_message = "Welcome!"
-        # default_voice_note_path = "assets/default.mp3"
-        await send_telegram_message(chat_id, welcome_message)
-        # await send_telegram_voice_message(chat_id, default_voice_note_path)
+        default_voice_note_path = "assets/default.mp3"
+        # await send_telegram_message(chat_id, welcome_message)
+        await send_telegram_voice_message(chat_id, default_voice_note_path)
 
     # Add user message to history
     users[chat_id]['message_history'].append({"role": "user", "content": text})
 
     # Generate response using OpenAI API
-    # response_text = generate_text(chat_id)
-    response_text = "working on it"
+    response_text = generate_text(chat_id)
+    # response_text = "working on it"
     users[chat_id]['message_history'].append({"role": "assistant", "content": response_text})
 
-    # voice_note_path = convert_text_to_speech(response_text)
+    voice_note_path = convert_text_to_speech(response_text)
 
     try:
-        await send_telegram_message(chat_id, response_text)
-        # await send_telegram_voice_message(chat_id, voice_note_path)
+        # await send_telegram_message(chat_id, response_text)
+        await send_telegram_voice_message(chat_id, voice_note_path)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send default voice message: {str(e)}")
