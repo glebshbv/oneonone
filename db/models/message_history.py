@@ -12,3 +12,17 @@ class MessageHistory(Timestamp, Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     owner = relationship("User", back_populates="message_history")
+
+    def to_dict(self, include_id=True, include_timestamps=True, include_user_id=True):
+        data = {
+            "role": self.role,
+            "content": self.content,
+        }
+        if include_id:
+            data["id"] = self.id
+        if include_user_id:
+            data["user_id"] = self.user_id
+        if include_timestamps:
+            data["created_at"] = self.created_at
+            data["updated_at"] = self.updated_at
+        return data

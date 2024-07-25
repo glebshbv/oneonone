@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, Header
+from fastapi import FastAPI, Request, HTTPException, Header, Depends
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -10,8 +10,15 @@ import uuid
 from db.database import engine
 from db.models import user
 from db.models import message_history
+from db.database import get_db
+from sqlalchemy.orm import Session
 
 from api import client, admin
+
+from schemas.telegram_message import TelegramMessage
+
+from services.message_handler import MessageHandler
+from services.openai_handler import OpenAIHandler
 
 user.Base.metadata.create_all(bind=engine)
 message_history.Base.metadata.create_all(bind=engine)
@@ -33,64 +40,60 @@ eclient = ElevenLabs(
 )
 
 
-class TelegramMessage(BaseModel):
-    update_id: int
-    message: dict
-
-
-class Prompt(BaseModel):
-    text: str
-    max_length: int = 100
-
-
 @app.post("/webhook")
-async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str = Header(None)):
-    if x_telegram_bot_api_secret_token != os.getenv('TELEGRAM_WEBHOOK_TOKEN'):
-        raise HTTPException(status_code=403, detail="Unauthorized")
-
+async def handle_webhook(request: Request, x_telegram_bot_api_secret_token: str = Header(None), db: Session = Depends(get_db)):
+    # if x_telegram_bot_api_secret_token != os.getenv('TELEGRAM_WEBHOOK_TOKEN'):
+    #     raise HTTPException(status_code=403, detail="Unauthorized")
     data = await request.json()
-    telegram_message = TelegramMessage(**data)
-    print(telegram_message)
-    chat_id, text = telegram_message.message['chat']['id'], telegram_message.message.get('text', '')
 
-    if chat_id not in users:
-        users[chat_id] = {
-            "user_info": telegram_message.message['from'],
-            "message_history": [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are sexting agent for erotic chat." 
-                        "Talk casually as if it was a conversation with a girlfriend over a messenger." 
-                        "Use poor grammar. Use abbreviations such as lol haha and etc. Do NOT use emoji." 
-                        "Be shy sometimes. Tease the user, so they want more."
-                    )
-                }
-            ]
-        }
-        welcome_message = "Welcome!"
-        default_voice_note_path = "assets/default.mp3"
-        # await send_telegram_message(chat_id, welcome_message)
-        await send_telegram_voice_message(chat_id, default_voice_note_path)
+    user_id = await MessageHandler(telegram_message=data, db=db).receive_message()
 
-    # Add user message to history
-    users[chat_id]['message_history'].append({"role": "user", "content": text})
-
-    # Generate response using OpenAI API
-    response_text = generate_text(chat_id)
+    oai_handler = OpenAIHandler(user_id=user_id, db=db).messages()
+    print("This is my answer:", oai_handler)
+    #
+    #
+    #
+    # telegram_message = TelegramMessage(**data)
+    #
+    # chat_id, text = telegram_message.message['chat']['id'], telegram_message.message.get('text', '')
+    #
+    # if chat_id not in users:
+    #     users[chat_id] = {
+    #         "user_info": telegram_message.message['from'],
+    #         "message_history": [
+    #             {
+    #                 "role": "system",
+    #                 "content": (
+    #                     "You are sexting agent for erotic chat."
+    #                     "Talk casually as if it was a conversation with a girlfriend over a messenger."
+    #                     "Use poor grammar. Use abbreviations such as lol haha and etc. Do NOT use emoji."
+    #                     "Be shy sometimes. Tease the user, so they want more."
+    #                 )
+    #             }
+    #         ]
+    #     }
+    #     welcome_message = "Welcome!"
+    #     default_voice_note_path = "assets/default.mp3"
+    #     await send_telegram_message(chat_id, welcome_message)
+    #     # await send_telegram_voice_message(chat_id, default_voice_note_path)
+    #
+    # # Add user message to history
+    # users[chat_id]['message_history'].append({"role": "user", "content": text})
+    #
+    # # Generate response using OpenAI API
+    # # response_text = generate_text(chat_id)
     # response_text = "working on it"
-    users[chat_id]['message_history'].append({"role": "assistant", "content": response_text})
+    # users[chat_id]['message_history'].append({"role": "assistant", "content": response_text})
+    #
+    # voice_note_path = convert_text_to_speech(response_text)
+    #
+    # try:
+    #     await send_telegram_message(chat_id, response_text)
+    #     # await send_telegram_voice_message(chat_id, voice_note_path)
+    #
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=f"Failed to send default voice message: {str(e)}")
 
-    voice_note_path = convert_text_to_speech(response_text)
-
-    try:
-        # await send_telegram_message(chat_id, response_text)
-        await send_telegram_voice_message(chat_id, voice_note_path)
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send default voice message: {str(e)}")
-
-    print(users)
 
     return {"status": "ok"}
 
