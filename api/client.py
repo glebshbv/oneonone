@@ -36,16 +36,19 @@ def verify_telegram_token(x_telegram_bot_api_secret_token: str = Header(...)):
 async def root():
     return {"message": "Hello World"}
 
-
-@router.post("/webhook", dependencies=[Depends(verify_telegram_token)])
+# , dependencies=[Depends(verify_telegram_token)]
+@router.post("/webhook")
 async def handle_webhook(request: Request,
                          db: Session = Depends(get_db),
                          ):
 
     data = await request.json()
     user_id = await MessageHandler(telegram_message=data, db=db).receive_message()
+    print(user_id)
     response_text = await OpenAIHandler(user_id=user_id, db=db).messages()
+    print(response_text)
     file_path = await ElevenLabsHandler().convert_text_to_ogg_and_set_link(text=response_text)
+    print(file_path)
     try:
         await TelegramHandler(db=db, user_id=user_id).send_voice_message(voice_file_url=file_path)
     except Exception as e:

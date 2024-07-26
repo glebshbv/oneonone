@@ -16,9 +16,9 @@ class TelegramHandler:
         self.voice_file_url = None
         self.chat_id = self._get_chat_id()
 
-    def send_voice_message(self, voice_file_url: str):
+    async def send_voice_message(self, voice_file_url: str):
         self.voice_file_url = voice_file_url
-        return self._execute_telegram_voice_message()
+        return await self._execute_telegram_voice_message()
 
     def _get_chat_id(self):
         return get_chat_id_by_user_id(db=self.db, user_id=self.user_id)
@@ -30,6 +30,7 @@ class TelegramHandler:
                 'voice': self.voice_file_url
             }
             response = await asyncclient.post(self.telegram_voice_api_url, data=data)
+            print(response.text)
         if response.status_code != 200:
             raise HTTPException(status_code=500, detail="Failed to send voice message")
         return response.json()
