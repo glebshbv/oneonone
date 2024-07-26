@@ -15,11 +15,14 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install Alembic
+RUN pip install alembic
+
 # Copy the FastAPI app code
 COPY . /app/
 
 # Expose the port FastAPI is running on
 EXPOSE 8000
 
-# Run the FastAPI app with uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run Alembic migrations and then the FastAPI app
+CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
