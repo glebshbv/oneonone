@@ -36,8 +36,8 @@ def verify_telegram_token(x_telegram_bot_api_secret_token: str = Header(...)):
 async def root():
     return {"message": "Hello World"}
 
-# , dependencies=[Depends(verify_telegram_token)]
-@router.post("/webhook")
+
+@router.post("/webhook", dependencies=[Depends(verify_telegram_token)])
 async def handle_webhook(request: Request,
                          db: Session = Depends(get_db),
                          ):
