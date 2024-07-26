@@ -12,7 +12,7 @@ class OpenAIHandler:
         self.message_history = {}
         self.chat_response = None
 
-    def messages(self):
+    async def messages(self):
         return self._ask_openai()
 
     def _retrieve_messages(self):

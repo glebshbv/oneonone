@@ -47,7 +47,6 @@ class MessageHandler:
         create_message_history(db=self.db, message_history=message)
         return message
 
-
     def _extract_data_from_telegram_message(self, telegram_message: TelegramMessage):
         self.chat_id = telegram_message['message']['chat']['id']
         self.text = telegram_message['message'].get('text', '')
