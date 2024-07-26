@@ -3,7 +3,7 @@ from schemas.message_history import MessageHistoryCreate
 from api.utils.users import get_user_by_chat_id, create_user
 from api.utils.message_history import create_message_history
 from db.database import get_db
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from schemas.user import UserCreate
@@ -29,6 +29,9 @@ class MessageHandler:
         if not self._check_if_user_exist():
             self._create_new_user()
             self._create_context_message()
+        if not self._check_remaining_tokens():
+            print("not enough tokens")
+            raise HTTPException(status_code=400, detail="Insufficient tokens")
         self._add_user_message_to_db()
         return int(self.user_id) if self.user_id else None
 
@@ -66,4 +69,7 @@ class MessageHandler:
         )
         create_message_history(db=self.db, message_history=message)
         return message
+
+    def _check_remaining_tokens(self):
+        return True
 

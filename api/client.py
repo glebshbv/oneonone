@@ -4,6 +4,8 @@ import fastapi
 from fastapi import FastAPI, Request, HTTPException, Header, Depends
 from starlette import status
 from sqlalchemy.orm import Session
+from starlette.responses import JSONResponse
+
 from db.database import get_db
 
 from services.eleven_labs_handler import ElevenLabsHandler
@@ -43,8 +45,13 @@ async def handle_webhook(request: Request,
                          ):
 
     data = await request.json()
-    user_id = await MessageHandler(telegram_message=data, db=db).receive_message()
-    print(user_id)
+    try:
+        user_id = await MessageHandler(telegram_message=data, db=db).receive_message()
+        print(user_id)
+    except HTTPException as e:
+        if e.status_code == 400:
+            return JSONResponse(status_code=400, content={"detail": str(e.detail)})
+
     response_text = await OpenAIHandler(user_id=user_id, db=db).messages()
     print(response_text)
     file_path = await ElevenLabsHandler().convert_text_to_ogg_and_set_link(text=response_text)
