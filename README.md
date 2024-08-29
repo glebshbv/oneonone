@@ -16,8 +16,8 @@ This bot leverages the power of OpenAI for natural language understanding and El
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/custom-voice-telegram-bot.git
-   cd custom-voice-telegram-bot
+   git clone https://github.com/glebshbv/oneonone.git
+   cd oneonone
    ```
 
 2. **Install dependencies:**
@@ -112,3 +112,5 @@ Contributions are welcome! Please fork this repository and submit a pull request
 ## **License**
 
 This project is licensed under the MIT License.
+
+Developed by Gleb Shabanov
