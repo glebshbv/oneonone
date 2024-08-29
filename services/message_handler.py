@@ -7,13 +7,13 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from schemas.user import UserCreate
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class MessageHandler:
 
-    DEFAULT_TEXT = ("You are sexting agent for erotic chat.Talk casually as if it was a conversation with a girlfriend" 
-                    "over a messenger.Use poor grammar. Use abbreviations such as lol haha and etc. Do NOT use emoji." 
-                    "Be shy sometimes. Tease the user, so they want more.")
+    DEFAULT_TEXT = os.getenv('DEFAULT_PROMPT')
 
     def __init__(self, telegram_message: TelegramMessage, db: Session):
         self.db = db

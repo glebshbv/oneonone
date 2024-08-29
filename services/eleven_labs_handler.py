@@ -47,7 +47,7 @@ class ElevenLabsHandler:
             audio_generator = self.client.generate(
                 text=self.text,
                 voice=Voice(
-                    voice_id='jiu4Wfaap7lPa79o7TSV',
+                    voice_id=os.getenv('ELEVEN_VOICE_ID'),
                     settings=VoiceSettings(stability=0.9,
                                            similarity_boost=0.55,
                                            style=0.25,
